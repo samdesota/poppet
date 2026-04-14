@@ -62,6 +62,11 @@ describe("poppet CLI", () => {
     expect(pid1).toBeDefined();
     expect(pid2).toBeDefined();
     expect(pid1).not.toBe(pid2);
+
+    // Logs should contain the restart marker
+    execFileSync("sleep", ["0.5"]);
+    const logs = poppet("logs", "1");
+    expect(logs).toContain("--- restarted at");
   });
 
   it("remove deletes entry and logs", () => {

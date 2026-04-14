@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import fs from "node:fs";
-import { getStdoutLogPath, getStderrLogPath, deleteLogFiles } from "./logs.js";
+import { getStdoutLogPath, getStderrLogPath } from "./logs.js";
 import {
   withRegistry,
   findEntry,
@@ -44,10 +44,13 @@ export async function spawnDetached(
     const stdoutFd = fs.openSync(getStdoutLogPath(id), "w");
     const stderrFd = fs.openSync(getStderrLogPath(id), "w");
 
+    const spawnEnv = { ...process.env, FORCE_COLOR: "1" };
+
     const child = spawn(command, args, {
       cwd,
       detached: true,
       stdio: ["ignore", stdoutFd, stderrFd],
+      env: spawnEnv,
     });
 
     child.unref();
@@ -100,6 +103,7 @@ export async function spawnAttached(
   const child = spawn(command, args, {
     cwd,
     stdio: ["inherit", "pipe", "pipe"],
+    env: { ...process.env, FORCE_COLOR: "1" },
   });
 
   const childPid = child.pid!;
@@ -168,18 +172,23 @@ export async function restartProcess(id: number): Promise<RegistryEntry> {
     await new Promise((r) => setTimeout(r, 500));
   }
 
-  // Delete old logs
-  deleteLogFiles(id);
-
-  // Spawn new detached process
+  // Append restart marker to existing logs instead of deleting them
   fs.mkdirSync(getLogsDir(), { recursive: true });
-  const stdoutFd = fs.openSync(getStdoutLogPath(id), "w");
-  const stderrFd = fs.openSync(getStderrLogPath(id), "w");
+  const restartMarker = `\n--- restarted at ${new Date().toISOString()} ---\n`;
+  fs.appendFileSync(getStdoutLogPath(id), restartMarker);
+  fs.appendFileSync(getStderrLogPath(id), restartMarker);
+
+  // Spawn new detached process, appending to existing logs
+  const stdoutFd = fs.openSync(getStdoutLogPath(id), "a");
+  const stderrFd = fs.openSync(getStderrLogPath(id), "a");
+
+  const spawnEnv = { ...process.env, FORCE_COLOR: "1" };
 
   const child = spawn(entry.command, entry.args, {
     cwd: entry.cwd,
     detached: true,
     stdio: ["ignore", stdoutFd, stderrFd],
+    env: spawnEnv,
   });
 
   child.unref();
