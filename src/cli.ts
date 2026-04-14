@@ -84,10 +84,14 @@ program
   .command("logs")
   .description("Print logs for a command")
   .argument("<id>", "Command ID")
-  .option("--stderr", "Show stderr instead of stdout")
+  .option("--stdout", "Show only stdout")
+  .option("--stderr", "Show only stderr")
   .option("-f, --follow", "Follow log output in real-time")
   .action(
-    async (idStr: string, opts: { stderr?: boolean; follow?: boolean }) => {
+    async (
+      idStr: string,
+      opts: { stdout?: boolean; stderr?: boolean; follow?: boolean }
+    ) => {
       const id = parseInt(idStr, 10);
       const { readRegistry } = await import("./registry.js");
       const { refreshStatus } = await import("./process.js");
@@ -106,9 +110,13 @@ program
         process.exit(1);
       }
 
-      const logPath = opts.stderr
-        ? getStderrLogPath(id)
-        : getStdoutLogPath(id);
+      // Default: show both. --stdout or --stderr to filter.
+      const showStdout = !opts.stderr || opts.stdout;
+      const showStderr = !opts.stdout || opts.stderr;
+
+      const logPaths: string[] = [];
+      if (showStdout) logPaths.push(getStdoutLogPath(id));
+      if (showStderr) logPaths.push(getStderrLogPath(id));
 
       if (opts.follow) {
         const ac = new AbortController();
@@ -116,13 +124,17 @@ program
           ac.abort();
           process.exit(0);
         });
-        tailLogFile(logPath, ac.signal);
+        for (const logPath of logPaths) {
+          tailLogFile(logPath, ac.signal);
+        }
       } else {
-        try {
-          const content = fs.readFileSync(logPath, "utf-8");
-          process.stdout.write(content);
-        } catch {
-          // No log file yet
+        for (const logPath of logPaths) {
+          try {
+            const content = fs.readFileSync(logPath, "utf-8");
+            process.stdout.write(content);
+          } catch {
+            // No log file yet
+          }
         }
       }
     }
