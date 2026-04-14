@@ -5,13 +5,15 @@ const program = new Command();
 program
   .name("poppet")
   .description("Lightweight CLI process manager")
-  .version("0.1.0");
+  .version("0.1.0")
+  .enablePositionalOptions();
 
 program
   .command("spawn")
   .description("Spawn a command detached in the background")
   .argument("<cmd>", "Command to run")
   .argument("[args...]", "Arguments for the command")
+  .passThroughOptions()
   .action(async (cmd: string, args: string[]) => {
     const { spawnDetached } = await import("./process.js");
     const entry = await spawnDetached(cmd, args, process.cwd());
@@ -25,6 +27,7 @@ program
   .description("Run a command attached to the terminal")
   .argument("<cmd>", "Command to run")
   .argument("[args...]", "Arguments for the command")
+  .passThroughOptions()
   .action(async (cmd: string, args: string[]) => {
     const { spawnAttached } = await import("./process.js");
     await spawnAttached(cmd, args, process.cwd());
