@@ -1,0 +1,33 @@
+{
+  "name": "poppet",
+  "version": "0.1.0",
+  "description": "Lightweight CLI process manager with global registry",
+  "type": "module",
+  "bin": {
+    "poppet": "./bin/poppet.js"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "files": [
+    "dist",
+    "bin"
+  ],
+  "keywords": [
+    "cli",
+    "process-manager"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "commander": "^14.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "tsup": "^8.5.1",
+    "typescript": "^6.0.2",
+    "vitest": "^4.1.4"
+  }
+}
