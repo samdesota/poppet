@@ -84,11 +84,18 @@ describe("poppet CLI", () => {
   });
 
   it("logs shows command output", () => {
-    poppet("spawn", "--", "bash", "-c", "echo hello world");
+    poppet("spawn", "bash", "-c", "echo hello world");
     // Give echo a moment to finish
     execFileSync("sleep", ["0.5"]);
     const logs = poppet("logs", "1");
     expect(logs).toContain("hello world");
+  });
+
+  it("passes through flags to spawned commands without consuming them", () => {
+    poppet("spawn", "node", "-e", "console.log('flag-test')");
+    execFileSync("sleep", ["0.5"]);
+    const logs = poppet("logs", "1");
+    expect(logs).toContain("flag-test");
   });
 
   it("list without --all filters by cwd", () => {
