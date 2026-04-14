@@ -12,6 +12,7 @@ export interface RegistryEntry {
   command: string;
   args: string[];
   cwd: string;
+  env: Record<string, string>;
   pid: number;
   startedAt: string;
   status: "running" | "exited" | "stopped";

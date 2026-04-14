@@ -9,6 +9,15 @@ import {
 } from "./registry.js";
 import { getLogsDir } from "./config.js";
 
+function captureEnv(): Record<string, string> {
+  const env: Record<string, string> = {};
+  for (const [k, v] of Object.entries(process.env)) {
+    if (v !== undefined) env[k] = v;
+  }
+  env.FORCE_COLOR = "1";
+  return env;
+}
+
 export function isAlive(pid: number): boolean {
   try {
     process.kill(pid, 0);
@@ -35,6 +44,7 @@ export async function spawnDetached(
   cwd: string
 ): Promise<RegistryEntry> {
   let entry!: RegistryEntry;
+  const env = captureEnv();
 
   await withRegistry((registry) => {
     const id = registry.nextId;
@@ -44,13 +54,11 @@ export async function spawnDetached(
     const stdoutFd = fs.openSync(getStdoutLogPath(id), "w");
     const stderrFd = fs.openSync(getStderrLogPath(id), "w");
 
-    const spawnEnv = { ...process.env, FORCE_COLOR: "1" };
-
     const child = spawn(command, args, {
       cwd,
       detached: true,
       stdio: ["ignore", stdoutFd, stderrFd],
-      env: spawnEnv,
+      env,
     });
 
     child.unref();
@@ -62,6 +70,7 @@ export async function spawnDetached(
       command,
       args,
       cwd,
+      env,
       pid: child.pid!,
       startedAt: new Date().toISOString(),
       status: "running",
@@ -79,6 +88,7 @@ export async function spawnAttached(
   cwd: string
 ): Promise<void> {
   let id!: number;
+  const env = captureEnv();
 
   await withRegistry((registry) => {
     id = registry.nextId;
@@ -91,6 +101,7 @@ export async function spawnAttached(
       command,
       args,
       cwd,
+      env,
       pid: 0,
       startedAt: new Date().toISOString(),
       status: "running",
@@ -103,7 +114,7 @@ export async function spawnAttached(
   const child = spawn(command, args, {
     cwd,
     stdio: ["inherit", "pipe", "pipe"],
-    env: { ...process.env, FORCE_COLOR: "1" },
+    env,
   });
 
   const childPid = child.pid!;
@@ -179,16 +190,15 @@ export async function restartProcess(id: number): Promise<RegistryEntry> {
   fs.appendFileSync(getStderrLogPath(id), restartMarker);
 
   // Spawn new detached process, appending to existing logs
+  // Use the original env captured at spawn time
   const stdoutFd = fs.openSync(getStdoutLogPath(id), "a");
   const stderrFd = fs.openSync(getStderrLogPath(id), "a");
-
-  const spawnEnv = { ...process.env, FORCE_COLOR: "1" };
 
   const child = spawn(entry.command, entry.args, {
     cwd: entry.cwd,
     detached: true,
     stdio: ["ignore", stdoutFd, stderrFd],
-    env: spawnEnv,
+    env: entry.env,
   });
 
   child.unref();
